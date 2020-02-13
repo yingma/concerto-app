@@ -20,9 +20,9 @@ class EditableCell extends React.PureComponent {
     editing: false,
   }
 
-  setTargetRef = ref => (this.targetRef = ref)
+  setTargetRef = ref => (this.targetRef = ref);
 
-  getTargetRef = () => this.targetRef
+  getTargetRef = () => this.targetRef;
 
   handleClick = () => { 
     this.setState({ editing: true });

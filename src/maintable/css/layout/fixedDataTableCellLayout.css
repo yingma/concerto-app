@@ -17,6 +17,8 @@
   display: block;
   overflow: hidden;
   position: absolute;
+  white-space: nowrap;
+  text-overflow: ellipsis; 
 }
 
 .fixedDataTable_isRTL .fixedDataTableCellLayout_main {
@@ -48,8 +50,6 @@
 .fixedDataTableCellLayout_wrap3 {
   display: table-cell;
   vertical-align: middle;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .fixedDataTableCellLayout_columnResizerContainer {

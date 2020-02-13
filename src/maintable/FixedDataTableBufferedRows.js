@@ -9,7 +9,7 @@
  * @providesModule FixedDataTableBufferedRows
  * @typechecks
  */
-
+import ColumnResizerLine from './ColumnResizerLine';
 import FixedDataTableRow from './FixedDataTableRow';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -17,6 +17,8 @@ import cx from './vendor_upstream/stubs/cx';
 import emptyFunction from './vendor_upstream/core/emptyFunction';
 import joinClasses from './vendor_upstream/core/joinClasses';
 import inRange from 'lodash/inRange';
+import MainTableAddRow from './MainTableAddRow';
+import { RowType } from './MainTableType';
 
 import './css/layout/fixedDataTableLayout.css';
 import './css/style/fixedDataTable.css';
@@ -25,6 +27,9 @@ import './css/style/fixedDataTable.css';
 class FixedDataTableBufferedRows extends React.Component {
   static propTypes = {
     ariaRowIndexOffset: PropTypes.number,
+    ariaGroupHeaderIndex: PropTypes.number,
+    ariaHeaderIndex: PropTypes.number,
+    ariaFooterIndex: PropTypes.number,
     isScrolling: PropTypes.bool,
     firstViewportRowIndex: PropTypes.number.isRequired,
     endViewportRowIndex: PropTypes.number.isRequired,
@@ -84,8 +89,8 @@ class FixedDataTableBufferedRows extends React.Component {
   }
 
   render() /*object*/ {
-    let { offsetTop, scrollTop, isScrolling, rowsToRender } = this.props;
-    const baseOffsetTop = offsetTop - scrollTop;
+    let { scrollTop, isScrolling, rowsToRender } = this.props;
+    const baseOffsetTop =  - scrollTop;
     rowsToRender = rowsToRender || [];
 
     if (isScrolling) {
@@ -115,26 +120,60 @@ class FixedDataTableBufferedRows extends React.Component {
   }
 
   /**
+   * type header, footer, row 
+   */
+
+  /**
    * @param {number} rowIndex
    * @param {number} key
    * @param {number} baseOffsetTop
    * @return {!Object}
    */
   renderRow({ rowIndex, key, baseOffsetTop }) /*object*/ {
+
     const props = this.props;
+
+    const {
+      ariaHeaderIndex,
+      ariaFooterIndex,
+      ariaAddRowIndex,
+      componentHeight,
+      elementHeights,
+      columnReorderingData,
+      columnResizingData,
+      isColumnReordering,
+      isColumnResizing,
+      onColumnReorder,
+      onColumnReorderMove,
+      onColumnReorderEnd,
+      onColumnResizeEnd,
+      scrollX,
+      scrolling,
+      touchScrollEnabled,
+      fixedColumns,
+      fixedRightColumns,
+      scrollableColumns,
+      scrollEnabledY,
+    } = props;
+
+    const { footerHeight,  headerHeight, addRowHeight } = elementHeights;
+
     const rowClassNameGetter = props.rowClassNameGetter || emptyFunction;
     const fake = rowIndex === undefined;
     let rowProps = {};
 
+    // row data
+    const type = props.rowSettings.rowTypeGetter(rowIndex); // header or footer or addrow or row or header group
+    
     // if row exists, then calculate row specific props
     if (!fake) {
-      rowProps.height = this.props.rowSettings.rowHeightGetter(rowIndex);
-      rowProps.subRowHeight = this.props.rowSettings.subRowHeightGetter(rowIndex);
+      rowProps.height = props.rowSettings.rowHeightGetter(rowIndex);
+      rowProps.subRowHeight = props.rowSettings.subRowHeightGetter(rowIndex);
       rowProps.offsetTop = Math.round(baseOffsetTop + props.rowOffsets[rowIndex]);
       rowProps.key = props.rowKeyGetter ? props.rowKeyGetter(rowIndex) : key;
       rowProps.attributes = props.rowSettings.rowAttributesGetter && props.rowSettings.rowAttributesGetter(rowIndex);
 
-      const hasBottomBorder = (rowIndex === props.rowSettings.rowsCount - 1) && props.showLastRowBorder;
+      const hasBottomBorder = (type === RowType.FOOTER);
       rowProps.className = joinClasses(
         rowClassNameGetter(rowIndex),
         cx('public/fixedDataTable/bodyRow'),
@@ -145,37 +184,145 @@ class FixedDataTableBufferedRows extends React.Component {
       );
     }
 
-    const visible = inRange(rowIndex, this.props.firstViewportRowIndex, this.props.endViewportRowIndex);
+    const visible = inRange(rowIndex, props.firstViewportRowIndex, props.endViewportRowIndex);
+
+    const dragKnob =
+      <ColumnResizerLine
+        height={componentHeight}
+        initialWidth={columnResizingData.width || 0}
+        minWidth={columnResizingData.minWidth || 0}
+        maxWidth={columnResizingData.maxWidth || Number.MAX_VALUE}
+        visible={!!isColumnResizing && visible}
+        leftOffset={columnResizingData.left || 0}
+        knobHeight={rowProps.height}
+        initialEvent={columnResizingData.initialEvent}
+        onColumnResizeEnd={onColumnResizeEnd}
+        columnKey={columnResizingData.key}
+        touchEnabled={touchScrollEnabled}
+        isRTL={props.isRTL}
+      />;
+
+    let row;
+    if (rowProps.height > 0) {
+      switch(type) {
+          case RowType.HEADER:
+            row = 
+              <FixedDataTableRow
+                key={key}
+                index={rowIndex}
+                ariaRowIndex={ariaHeaderIndex}
+                isHeaderOrFooter={true}
+                isScrolling={props.isScrolling}
+                className={joinClasses(
+                  cx('fixedDataTableLayout/header'),
+                  cx('public/fixedDataTable/header'),
+                )}
+                width={props.width}
+                height={headerHeight}
+                zIndex={1}
+                offsetTop={rowProps.offsetTop}
+                scrollLeft={Math.round(props.scrollLeft)}
+                visible={visible}
+                fixedColumns={fixedColumns.header}
+                fixedRightColumns={fixedRightColumns.header}
+                scrollableColumns={scrollableColumns.header}
+                touchEnabled={touchScrollEnabled}
+                onColumnResize={this._onColumnResize}
+                onColumnReorder={onColumnReorder}
+                onColumnReorderMove={onColumnReorderMove}
+                onColumnReorderEnd={onColumnReorderEnd}
+                isColumnReordering={!!isColumnReordering}
+                columnReorderingData={columnReorderingData}
+                showScrollbarY={scrollEnabledY}
+                container={props.container}
+                isRTL={props.isRTL}>
+                  {dragKnob}
+                </FixedDataTableRow>
+            break;
+          case RowType.ADDROW:
+            row = 
+              <MainTableAddRow
+                key={key}
+                index={rowIndex}
+                zIndex={1}
+                ariaRowIndex={ariaAddRowIndex}
+                isScrolling={props.isScrolling}
+                height={addRowHeight}
+                width={props.width}
+                offsetTop={rowProps.offsetTop}
+                scrollLeft={Math.round(props.scrollLeft)}
+                fixedColumns={fixedColumns.cell}
+                fixedRightColumns={fixedRightColumns.cell}
+                scrollableColumns={scrollableColumns.cell}
+                showScrollbarY={scrollEnabledY}
+                isRTL={props.isRTL}
+                container={props.container}
+                visible={visible} 
+              />;
+          break;
+        
+          case RowType.FOOTER:
+            row =
+              <FixedDataTableRow
+                key={key}
+                index={rowIndex}
+                ariaRowIndex={ariaFooterIndex}
+                isHeaderOrFooter={true}
+                isScrolling={props.isScrolling}
+                className={joinClasses(
+                  cx('fixedDataTableLayout/footer'),
+                  cx('public/fixedDataTable/footer'),
+                )}
+                width={props.width}
+                height={footerHeight}
+                zIndex={1}
+                offsetTop={rowProps.offsetTop}
+                visible={visible}
+                fixedColumns={fixedColumns.footer}
+                fixedRightColumns={fixedRightColumns.footer}
+                scrollableColumns={scrollableColumns.footer}
+                scrollLeft={Math.round(props.scrollLeft)}
+                showScrollbarY={scrollEnabledY}
+                container={props.container}
+                isRTL={props.isRTL}
+              />;
+          break;
+
+        default:
+          row = 
+            <FixedDataTableRow
+                key={key}
+                index={rowIndex}
+                ariaRowIndex={rowIndex + props.ariaRowIndexOffset}
+                isScrolling={props.isScrolling}
+                width={props.width}
+                rowExpanded={props.rowExpanded}
+                scrollLeft={Math.round(props.scrollLeft)}
+                fixedColumns={props.fixedColumns.cell}
+                fixedRightColumns={props.fixedRightColumns.cell}
+                scrollableColumns={props.scrollableColumns.cell}
+                onClick={props.onRowClick}
+                onContextMenu={props.onRowContextMenu}
+                onDoubleClick={props.onRowDoubleClick}
+                onMouseDown={props.onRowMouseDown}
+                onMouseUp={props.onRowMouseUp}
+                onMouseEnter={props.onRowMouseEnter}
+                onMouseLeave={props.onRowMouseLeave}
+                onTouchStart={props.onRowTouchStart}
+                onTouchEnd={props.onRowTouchEnd}
+                onTouchMove={props.onRowTouchMove}
+                showScrollbarY={props.showScrollbarY}
+                isRTL={props.isRTL}
+                visible={visible}
+                fake={fake}
+                container={props.container}
+                {...rowProps}
+              />
+        }
+    }
 
     return (
-      <FixedDataTableRow
-        key={key}
-        index={rowIndex}
-        ariaRowIndex={rowIndex + props.ariaRowIndexOffset}
-        isScrolling={props.isScrolling}
-        width={props.width}
-        rowExpanded={props.rowExpanded}
-        scrollLeft={Math.round(props.scrollLeft)}
-        fixedColumns={props.fixedColumns}
-        fixedRightColumns={props.fixedRightColumns}
-        scrollableColumns={props.scrollableColumns}
-        onClick={props.onRowClick}
-        onContextMenu={props.onRowContextMenu}
-        onDoubleClick={props.onRowDoubleClick}
-        onMouseDown={props.onRowMouseDown}
-        onMouseUp={props.onRowMouseUp}
-        onMouseEnter={props.onRowMouseEnter}
-        onMouseLeave={props.onRowMouseLeave}
-        onTouchStart={props.onRowTouchStart}
-        onTouchEnd={props.onRowTouchEnd}
-        onTouchMove={props.onRowTouchMove}
-        showScrollbarY={props.showScrollbarY}
-        isRTL={props.isRTL}
-        visible={visible}
-        fake={fake}
-        container={props.container}
-        {...rowProps}
-      />
+        row
     );
   }
 }

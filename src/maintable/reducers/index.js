@@ -45,10 +45,14 @@ function getInitialState() {
       footerHeight: 0,
       groupHeaderHeight: 0,
       headerHeight: 0,
+      addRowHeight: 0,
     },
     rowSettings: {
       bufferRowCount: undefined,
       rowAttributesGetter: undefined,
+      rowGroupKeyGetter: () => 0,
+      rowTypeGetter: () => 0,
+      rowContentHeightGetter: () => 0,
       rowHeight: 0,
       rowHeightGetter: () => 0,
       rowsCount: 0,
@@ -87,7 +91,7 @@ function getInitialState() {
     scrollX: 0,
     scrollY: 0,
     scrolling: false,
-
+    sortColumn: null,  // +/- ascending/descending 
     /*
      * Internal state only used by this file
      * NOTE (jordan) internal state is altered in place
@@ -250,6 +254,8 @@ function setStateFromProps(state, props) {
   newState.rowSettings.subRowHeightGetter =
     props.subRowHeightGetter || (() => subRowHeight || 0);
   newState.rowSettings.rowAttributesGetter = props.rowAttributesGetter;
+
+  newState.rowSettings.rowTypeGetter = props.rowTypeGetter;
 
   newState.scrollFlags = Object.assign({}, newState.scrollFlags,
     pick(props, ['overflowX', 'overflowY', 'showScrollbarX', 'showScrollbarY']));

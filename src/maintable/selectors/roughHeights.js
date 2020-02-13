@@ -77,11 +77,10 @@ export const ScrollbarState = {
  */
 function roughHeights(columnProps, elementHeights, rowSettings,
     scrollFlags, tableSize) {
-  const { cellGroupWrapperHeight, footerHeight, headerHeight, groupHeaderHeight, addRowHeight } = elementHeights;
+  //const { cellGroupWrapperHeight, footerHeight, headerHeight, groupHeaderHeight, addRowHeight } = elementHeights;
   // we don't need border height to be added to the table if we are using cellGroupWrapperHeight
-  const borderHeight = cellGroupWrapperHeight ? 0 : 2 * BORDER_HEIGHT;
-  const reservedHeight = footerHeight + headerHeight +
-    groupHeaderHeight + borderHeight + addRowHeight;
+  //const borderHeight = cellGroupWrapperHeight ? 0 : 2 * BORDER_HEIGHT;
+  const reservedHeight = 0; //footerHeight + headerHeight + groupHeaderHeight + borderHeight + addRowHeight;
 
   const { height, maxHeight, useMaxHeight, width } = tableSize;
   const maxComponentHeight = Math.round(useMaxHeight ? maxHeight : height);

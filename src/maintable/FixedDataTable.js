@@ -12,13 +12,10 @@
  */
 
 /*eslint no-bitwise:1*/
-
-import FixedDataTableBufferedRows from './FixedDataTableBufferedRows';
-import ColumnResizerLine from './ColumnResizerLine';
-import FixedDataTableEventHelper from './FixedDataTableEventHelper';
-import FixedDataTableRow from './FixedDataTableRow';
 import React from 'react';
 import PropTypes from 'prop-types';
+import FixedDataTableBufferedRows from './FixedDataTableBufferedRows';
+import FixedDataTableEventHelper from './FixedDataTableEventHelper';
 import ReactTouchHandler from './ReactTouchHandler';
 import ReactWheelHandler from './vendor_upstream/dom/ReactWheelHandler';
 import Scrollbar from './Scrollbar';
@@ -30,7 +27,6 @@ import isNaN from 'lodash/isNaN';
 import joinClasses from './vendor_upstream/core/joinClasses';
 import scrollbarsVisible from './selectors/scrollbarsVisible';
 import tableHeightsSelector from './selectors/tableHeights';
-import MainTableAddRow from './MainTableAddRow';
 
 import './css/layout/fixedDataTableLayout.css';
 import './css/style/fixedDataTable.css';
@@ -464,9 +460,10 @@ class FixedDataTable extends React.Component {
   static defaultProps = /*object*/ {
     elementHeights: {
       cellGroupWrapperHeight: undefined,
-      footerHeight: 0,
+      footerHeight: 40,
       groupHeaderHeight: 0,
-      headerHeight: 0,
+      headerHeight: 40,
+      addRowHeight: 35,
     },
     keyboardScrollEnabled: false,
     keyboardPageEnabled: false,
@@ -649,85 +646,30 @@ class FixedDataTable extends React.Component {
       ariaFooterIndex,
       ariaRowCount,
       ariaRowIndexOffset,
-      ariaAddRowIndex,
     } = ariaAttributesSelector(this.props);
 
     const {
-      fixedColumnGroups,
-      fixedColumns,
-      fixedRightColumnGroups,
-      fixedRightColumns,
-      scrollableColumnGroups,
-      scrollableColumns,
-    } = columnTemplatesSelector(this.props);
-
-    const {
       bodyHeight,
-      bodyOffsetTop,
       componentHeight,
-      addRowOffsetTop,
-      footOffsetTop,
       scrollbarXOffsetTop,
       visibleRowsHeight,
     } = tableHeightsSelector(this.props);
 
     const {
       className,
-      columnReorderingData,
-      columnResizingData,
-      elementHeights,
-      isColumnReordering,
-      isColumnResizing,
       gridAttributesGetter,
       maxScrollX,
-      maxScrollY,
-      onColumnReorderEndCallback,
-      onColumnResizeEndCallback,
       scrollContentHeight,
       scrollX,
       scrollY,
-      scrolling,
       tableSize,
       touchScrollEnabled,
     } = this.props;
 
     const { ownerHeight, width } = tableSize;
-    const { cellGroupWrapperHeight, footerHeight, groupHeaderHeight, headerHeight, addRowHeight } = elementHeights;
+    // const { cellGroupWrapperHeight, footerHeight, groupHeaderHeight, headerHeight, addRowHeight } = elementHeights;
     const { scrollEnabledX, scrollEnabledY } = scrollbarsVisible(this.props);
-    const onColumnReorder = onColumnReorderEndCallback ? this._onColumnReorder : null;
     const attributes = gridAttributesGetter && gridAttributesGetter();
-
-    let groupHeader;
-    if (groupHeaderHeight > 0) {
-      groupHeader = (
-        <FixedDataTableRow
-          key="group_header"
-          ariaRowIndex={ariaGroupHeaderIndex}
-          isHeaderOrFooter={true}
-          isScrolling={scrolling}
-          className={joinClasses(
-            cx('fixedDataTableLayout/header'),
-            cx('public/fixedDataTable/header'),
-          )}
-          width={width}
-          height={groupHeaderHeight}
-          cellGroupWrapperHeight={cellGroupWrapperHeight}
-          index={0}
-          zIndex={1}
-          offsetTop={0}
-          scrollLeft={scrollX}
-          fixedColumns={fixedColumnGroups}
-          fixedRightColumns={fixedRightColumnGroups}
-          scrollableColumns={scrollableColumnGroups}
-          visible={true}
-          onColumnResize={this._onColumnResize}
-          onColumnReorder={onColumnReorder}
-          onColumnReorderMove={this._onColumnReorderMove}
-          showScrollbarY={scrollEnabledY}
-          isRTL={this.props.isRTL}
-        />
-      );
-    }
 
     let scrollbarY;
     if (scrollEnabledY) {
@@ -736,7 +678,7 @@ class FixedDataTable extends React.Component {
           size={visibleRowsHeight}
           contentSize={scrollContentHeight}
           onScroll={this._onVerticalScroll}
-          verticalTop={bodyOffsetTop}
+          verticalTop={0}
           position={scrollY}
           touchEnabled={touchScrollEnabled}
           isRTL={this.props.isRTL}
@@ -757,137 +699,8 @@ class FixedDataTable extends React.Component {
         />;
     }
 
-    const dragKnob =
-      <ColumnResizerLine
-        height={componentHeight}
-        initialWidth={columnResizingData.width || 0}
-        minWidth={columnResizingData.minWidth || 0}
-        maxWidth={columnResizingData.maxWidth || Number.MAX_VALUE}
-        visible={!!isColumnResizing}
-        leftOffset={columnResizingData.left || 0}
-        knobHeight={headerHeight}
-        initialEvent={columnResizingData.initialEvent}
-        onColumnResizeEnd={onColumnResizeEndCallback}
-        columnKey={columnResizingData.key}
-        touchEnabled={touchScrollEnabled}
-        isRTL={this.props.isRTL}
-      />;
+    const rows = this._renderRows(ariaGroupHeaderIndex, ariaHeaderIndex, ariaFooterIndex, ariaRowIndexOffset, bodyHeight, componentHeight);
 
-
-    let addrow = null;
-    if (addRowHeight && fixedColumns.cell.length > 0) {
-      addrow = 
-        <MainTableAddRow
-          key="addrow"
-          index={-2}
-          zIndex={1}
-          ariaRowIndex={ariaAddRowIndex}
-          isScrolling={scrolling}
-          height={addRowHeight}
-          width={width}
-          offsetTop={addRowOffsetTop}
-          scrollLeft={scrollX}
-          fixedColumns={fixedColumns.cell}
-          fixedRightColumns={fixedRightColumns.cell}
-          scrollableColumns={scrollableColumns.cell}
-          showScrollbarY={scrollEnabledY}
-          isRTL={this.props.isRTL}
-          visible={true} 
-        />;
-    }
-
-    let footer = null;
-    if (footerHeight) {
-      footer =
-        <FixedDataTableRow
-          key="footer"
-          ariaRowIndex={ariaFooterIndex}
-          isHeaderOrFooter={true}
-          isScrolling={scrolling}
-          className={joinClasses(
-            cx('fixedDataTableLayout/footer'),
-            cx('public/fixedDataTable/footer'),
-          )}
-          width={width}
-          height={footerHeight}
-          index={-1}
-          zIndex={1}
-          offsetTop={footOffsetTop}
-          visible={true}
-          fixedColumns={fixedColumns.footer}
-          fixedRightColumns={fixedRightColumns.footer}
-          scrollableColumns={scrollableColumns.footer}
-          scrollLeft={scrollX}
-          showScrollbarY={scrollEnabledY}
-          isRTL={this.props.isRTL}
-        />;
-    }
-
-    const rows = this._renderRows(bodyOffsetTop, fixedColumns.cell, fixedRightColumns.cell,
-      scrollableColumns.cell, bodyHeight, ariaRowIndexOffset);
-
-    const header =
-      <FixedDataTableRow
-        key="header"
-        ariaRowIndex={ariaHeaderIndex}
-        isHeaderOrFooter={true}
-        isScrolling={scrolling}
-        className={joinClasses(
-          cx('fixedDataTableLayout/header'),
-          cx('public/fixedDataTable/header'),
-        )}
-        width={width}
-        height={headerHeight}
-        cellGroupWrapperHeight={cellGroupWrapperHeight}
-        index={-1}
-        zIndex={1}
-        offsetTop={groupHeaderHeight}
-        scrollLeft={scrollX}
-        visible={true}
-        fixedColumns={fixedColumns.header}
-        fixedRightColumns={fixedRightColumns.header}
-        scrollableColumns={scrollableColumns.header}
-        touchEnabled={touchScrollEnabled}
-        onColumnResize={this._onColumnResize}
-        onColumnReorder={onColumnReorder}
-        onColumnReorderMove={this._onColumnReorderMove}
-        onColumnReorderEnd={this._onColumnReorderEnd}
-        isColumnReordering={!!isColumnReordering}
-        columnReorderingData={columnReorderingData}
-        showScrollbarY={scrollEnabledY}
-        container={this}
-        isRTL={this.props.isRTL}
-      />;
-
-
-
-    let topShadow;
-    if (scrollY) {
-      topShadow =
-        <div
-          className={joinClasses(
-            cx('fixedDataTableLayout/topShadow'),
-            cx('public/fixedDataTable/topShadow'),
-          )}
-          style={{top: bodyOffsetTop}}
-        />;
-    }
-
-    // ownerScrollAvailable is true if the rows rendered will overflow the owner element
-    // so we show a shadow in that case even if the FDT component can't scroll anymore
-    const ownerScrollAvailable = ownerHeight && ownerHeight < componentHeight &&
-      scrollContentHeight > visibleRowsHeight;
-    let bottomShadow;
-    if (ownerScrollAvailable || scrollY < maxScrollY) {
-      bottomShadow =
-        <div
-          className={joinClasses(
-            cx('fixedDataTableLayout/bottomShadow'),
-            cx('public/fixedDataTable/bottomShadow'),
-          )}
-          style={{top: footOffsetTop}}
-        />;
-    }
     var tabIndex = null;
     if (this.props.keyboardPageEnabled || this.props.keyboardScrollEnabled) {
       tabIndex = 0;
@@ -924,14 +737,7 @@ class FixedDataTable extends React.Component {
             height: scrollbarXOffsetTop,
             width
           }}>
-          {dragKnob}
-          {groupHeader}
-          {header}
           {rows}
-          {addrow}
-          {footer}
-          {topShadow}
-          {bottomShadow}
         </div>
         {scrollbarY}
         {scrollbarX}
@@ -939,20 +745,47 @@ class FixedDataTable extends React.Component {
     );
   }
 
-  _renderRows = (/*number*/ offsetTop, fixedCellTemplates, fixedRightCellTemplates, scrollableCellTemplates,
-    bodyHeight, /*number*/ ariaRowIndexOffset) /*object*/ => {
-    const { scrollEnabledY } = scrollbarsVisible(this.props);
+  _renderRows =  (/*number*/ ariaGroupHeaderIndex, /*number*/ ariaHeaderIndex, /*number*/ ariaFooterIndex, 
+    /*number*/ ariaRowIndexOffset, /*number*/ bodyHeight, /*number*/ componentHeight) /*object*/ => {
+
     const props = this.props;
+    const { scrollEnabledY } = scrollbarsVisible(props);
+
+    const {
+      fixedColumnGroups,
+      fixedColumns,
+      fixedRightColumnGroups,
+      fixedRightColumns,
+      scrollableColumnGroups,
+      scrollableColumns,
+    } = columnTemplatesSelector(props);
+
+    const onColumnReorder = props.onColumnReorderEndCallback ? this._onColumnReorder : null;
+
     return (
       <FixedDataTableBufferedRows
         ariaRowIndexOffset={ariaRowIndexOffset}
+        ariaGroupHeaderIndex={ariaGroupHeaderIndex}
+        ariaHeaderIndex={ariaHeaderIndex}
+        ariaFooterIndex={ariaFooterIndex}
         isScrolling={props.scrolling}
-        fixedColumns={fixedCellTemplates}
-        fixedRightColumns={fixedRightCellTemplates}
+        fixedColumnGroups={fixedColumnGroups}
+        fixedColumns={fixedColumns}        
+        fixedRightColumnGroups={fixedRightColumnGroups}
+        fixedRightColumns={fixedRightColumns}
         firstViewportRowIndex={props.firstRowIndex}
         endViewportRowIndex={props.endRowIndex}
+        elementHeights={props.elementHeights}
         height={bodyHeight}
-        offsetTop={offsetTop}
+        componentHeight={componentHeight}
+        columnReorderingData={props.columnReorderingData}
+        columnResizingData={props.columnResizingData}
+        isColumnReordering={props.isColumnReordering}
+        isColumnResizing={props.isColumnResizing}
+        onColumnReorder={onColumnReorder}
+        onColumnReorderMove={this._onColumnReorderMove}
+        onColumnReorderEnd={this._onColumnReorderEnd}
+        onColumnResizeEnd={props.onColumnResizeEndCallback}
         onRowClick={props.onRowClick}
         onRowContextMenu={props.onRowContextMenu}
         onRowDoubleClick={props.onRowDoubleClick}
@@ -969,7 +802,8 @@ class FixedDataTable extends React.Component {
         rowSettings={props.rowSettings}
         scrollLeft={props.scrollX}
         scrollTop={props.scrollY}
-        scrollableColumns={scrollableCellTemplates}
+        scrollableColumnGroups={scrollableColumnGroups}
+        scrollableColumns={scrollableColumns}
         showLastRowBorder={true}
         width={props.tableSize.width}
         rowsToRender={props.rows}
@@ -1076,7 +910,6 @@ class FixedDataTable extends React.Component {
       scrollFlags,
       scrollX,
       scrollY,
-      scrolling,
     } = this.props;
     const { overflowX, overflowY } = scrollFlags;
 
@@ -1112,7 +945,6 @@ class FixedDataTable extends React.Component {
       onHorizontalScroll,
       scrollActions,
       scrollX,
-      scrolling,
     } = this.props;
 
     if (scrollPos === scrollX) {

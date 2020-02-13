@@ -17,7 +17,7 @@
 /* Touching the scroll-track directly makes the scroll-track bolder */
 .public_Scrollbar_main.public_Scrollbar_mainActive,
 .public_Scrollbar_main {
-  background-color: var(scrollbar-track-color);
+  background-color: #fff;
   border-left: 1px solid #d3d3d3;
 }
 

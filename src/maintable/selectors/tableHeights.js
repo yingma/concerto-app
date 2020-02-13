@@ -77,20 +77,19 @@ function tableHeights(elementHeights, ownerHeight, reservedHeight,
   }
 
   // Determine component offsets
-  const { footerHeight, groupHeaderHeight, headerHeight, addRowHeight } = elementHeights;
-  const bodyOffsetTop = groupHeaderHeight + headerHeight;
-  const addRowOffsetTop = bodyOffsetTop + visibleRowsHeight;
-  const footOffsetTop = addRowOffsetTop + addRowHeight;
-  const scrollbarXOffsetTop = footOffsetTop + footerHeight;
-  const scrollbarYHeight = Math.max(0, footOffsetTop - bodyOffsetTop);
+  // const { footerHeight, groupHeaderHeight, headerHeight } = elementHeights;
+  // const bodyOffsetTop = groupHeaderHeight + headerHeight; 
+  // const footOffsetTop = bodyOffsetTop + visibleRowsHeight;
+  // const scrollbarXOffsetTop = footOffsetTop + footerHeight;
+  // const scrollbarYHeight = Math.max(0, footOffsetTop - bodyOffsetTop);
+
+  const scrollbarXOffsetTop = visibleRowsHeight;
+  const scrollbarYHeight = Math.max(0, visibleRowsHeight);
 
   return {
     bodyHeight,
-    bodyOffsetTop,
     componentHeight,
     contentHeight,
-    addRowOffsetTop,
-    footOffsetTop,
     scrollbarXOffsetTop,
     scrollbarYHeight,
     visibleRowsHeight,
