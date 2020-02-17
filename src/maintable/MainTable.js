@@ -44,6 +44,8 @@ class MainTable extends React.Component {
         this.getRowType = this.getRowType.bind(this);
         this.getRowKey = this.getRowKey.bind(this);
         this.getObjectAt = this.getObjectAt.bind(this);
+        this.onRowReorderEndCallback = this.onColumnReorderEndCallback.bind(this);
+        this.onColumnResizeEndCallback = this.onColumnResizeEndCallback.bind(this);
 
         var index = 0;
         for(let i = 0; i < this._dataset.getGroups().length; i ++) {
@@ -95,6 +97,28 @@ class MainTable extends React.Component {
         return this.state.sortedRowList[index].rowKey;
     }
 
+    getColumnWidth(columnKey) {
+        let columns = this.state.columns;
+        for (let index = 0; index < columns.length; index++) {
+            const column = columns[index];
+            if (column.columnKey === columnKey) {
+                return column.width;
+            }
+        }
+        return 80;
+    }
+
+    setColumnWidth(columnKey, width) {
+        let columns = this.state.columns;
+        for (let index = 0; index < columns.length; index++) {
+            const column = columns[index];
+            if (column.columnKey === columnKey) {
+                column.width = width;
+            }
+        }
+        this.setState({columns: columns})
+    }
+
     getRowHeight(index) {
         let rowtype = this.getRowType(index);
         if (rowtype) {
@@ -112,6 +136,36 @@ class MainTable extends React.Component {
         return 40;
     }
 
+    onColumnReorderEndCallback(event) {
+        const {rowKey, oldRowIndex, newRowIndex} = event;
+        let rows = this.state.sortedRowList;
+        if (oldRowIndex !== newRowIndex) {            
+            // move row
+            let oldRow = rows[oldRowIndex];
+            let newRow = rows[newRowIndex];
+
+            if (oldRow.groupKey != newRow.groupKey) {
+                //move group
+            }
+
+            if ( newRowIndex < oldRowIndex ) { // move backward
+                let oldrow = rows[oldRowIndex];
+                for (let row = oldRowIndex; row > newRowIndex; -- row ) {
+                    rows[row] = rows[row-1]; 
+                }
+                rows[newRowIndex] = oldrow;
+            } else {   // move forward
+                let oldrow = rows[oldRowIndex];
+                for (let row = oldRowIndex; row < newRowIndex; ++ row ) {
+                    rows[row] = rows[row+1]; 
+                }
+                rows[newRowIndex] = oldrow;
+            }
+            this.setState({sortedRowList: rows});
+        }
+
+    }
+
     getColumnTemplate(columnKey) {
         let columns = this.state.columns;
         let rowTemplates = {};
@@ -124,6 +178,9 @@ class MainTable extends React.Component {
                     rowTemplates.header = <Cell>{column.name}</Cell>;
                     rowTemplates.cell = <TextCell data={this}/>;
                     rowTemplates.footer = <Cell>summary</Cell>;
+                    rowTemplates.width = this.getColumnWidth(columnKey);
+                    rowTemplates.minWidth = 70;
+                    rowTemplates.isResizable = true;
                     return rowTemplates;   
                 }
                 if (column.type === ColumnType.EDITBOX) {
@@ -131,6 +188,9 @@ class MainTable extends React.Component {
                     rowTemplates.header = <Cell>{column.name}</Cell>;
                     rowTemplates.cell = <EditableCell data={this}/>;
                     rowTemplates.footer = <Cell>summary</Cell>;
+                    rowTemplates.width = this.getColumnWidth(columnKey);
+                    rowTemplates.minWidth = 70;
+                    rowTemplates.isResizable = true;
                     return rowTemplates;  
                 }
             }
@@ -142,6 +202,10 @@ class MainTable extends React.Component {
     handleRef = component => {
         this.setState({ref: component});
     };
+
+    onColumnResizeEndCallback(newColumnWidth, columnKey) {
+        this.setColumnWidth(columnKey, newColumnWidth);
+    }
 
     render() {
         const addColumnStyle = {
@@ -156,12 +220,14 @@ class MainTable extends React.Component {
                 ref={this.handleRef}
                 headerHeight={40}
                 rowHeight={40}
+                isColumnResizing={false}
                 addRowHeight={35}
                 footerHeight={40}
                 rowsCount={this.state.sortedRowList.length}
                 rowHeightGetter={this.getRowHeight}
                 rowTypeGetter={this.getRowType}
                 rowKeyGetter={this.getRowKey}
+                onColumnResizeEndCallback={this.onColumnResizeEndCallback}
                 height={400}
                 width={800}
                 {...this.props}>

@@ -537,18 +537,35 @@ class FixedDataTableRow extends React.Component {
     };
     let top = offsetTop;
     if (isMovingRow) {
-      top = this.props.rowReorderingData.top - this.props.rowReorderingData.dragDistanceY; //+ scrollTop - this.props.rowReorderingData.oldScrollTop; 
-      console.log(top);
+      top = this.props.rowReorderingData.top - this.props.rowReorderingData.dragDistanceY - this.props.rowReorderingData.oldScrollTop; 
     }
+
+    let dropPlace;
+    if (this.props.isRowReordering 
+      && this.props.rowReorderingData 
+      && rowProps.index === this.props.rowReorderingData.newRowIndex) {
+      let placeStyle = {
+        height: this.props.rowReorderingData.height,
+        width: this.props.width,
+        marginBottom: '-3px',
+        border: '1px dashed gray',
+      }
+      FixedDataTableTranslateDOMPosition(placeStyle, 0, offsetTop, this._initialRender, this.props.isRTL);
+
+      dropPlace = <div style={placeStyle}></div>
+    }  
 
     FixedDataTableTranslateDOMPosition(style, 0, top, this._initialRender, this.props.isRTL);
 
     return (
+      <div>
+        {dropPlace}
       <div
         style={style}
         className={cx('fixedDataTableRowLayout/rowWrapper')}
         >
         <FixedDataTableRowImpl {...rowProps} />
+      </div>
       </div>
     );
   }

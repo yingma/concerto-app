@@ -9,7 +9,6 @@
  * @providesModule FixedDataTableBufferedRows
  * @typechecks
  */
-import ColumnResizerLine from './ColumnResizerLine';
 import FixedDataTableRow from './FixedDataTableRow';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -19,7 +18,7 @@ import joinClasses from './vendor_upstream/core/joinClasses';
 import inRange from 'lodash/inRange';
 import MainTableAddRow from './MainTableAddRow';
 import { RowType } from './MainTableType';
-import FixedDataTableTranslateDOMPosition from './FixedDataTableTranslateDOMPosition';
+//import FixedDataTableTranslateDOMPosition from './FixedDataTableTranslateDOMPosition';
 
 import './css/layout/fixedDataTableLayout.css';
 import './css/style/fixedDataTable.css';
@@ -139,18 +138,19 @@ class FixedDataTableBufferedRows extends React.Component {
       ariaHeaderIndex,
       ariaFooterIndex,
       ariaAddRowIndex,
-      componentHeight,
+      //componentHeight,
       elementHeights,
       isRowReordering,
       rowReorderingData,
       columnReorderingData,
-      columnResizingData,
+      //columnResizingData,
       isColumnReordering,
-      isColumnResizing,
+      //isColumnResizing,
       onColumnReorder,
       onColumnReorderMove,
       onColumnReorderEnd,
-      onColumnResizeEnd,
+      onColumnResize,
+      //onColumnResizeEnd,
       touchScrollEnabled,
       fixedColumns,
       fixedRightColumns,
@@ -192,21 +192,6 @@ class FixedDataTableBufferedRows extends React.Component {
     const visible = inRange(rowIndex, props.firstViewportRowIndex, props.endViewportRowIndex) 
                     || (isRowReordering && rowReorderingData.rowKey === rowProps.rowKey);
 
-    const dragKnob =
-      <ColumnResizerLine
-        height={componentHeight}
-        initialWidth={columnResizingData.width || 0}
-        minWidth={columnResizingData.minWidth || 0}
-        maxWidth={columnResizingData.maxWidth || Number.MAX_VALUE}
-        visible={!!isColumnResizing && visible}
-        leftOffset={columnResizingData.left || 0}
-        knobHeight={rowProps.height}
-        initialEvent={columnResizingData.initialEvent}
-        onColumnResizeEnd={onColumnResizeEnd}
-        columnKey={columnResizingData.key}
-        touchEnabled={touchScrollEnabled}
-        isRTL={props.isRTL}
-      />;
 
     let row;
     if (rowProps.height > 0) {
@@ -234,7 +219,7 @@ class FixedDataTableBufferedRows extends React.Component {
                 fixedRightColumns={fixedRightColumns.header}
                 scrollableColumns={scrollableColumns.header}
                 touchEnabled={touchScrollEnabled}
-                onColumnResize={this._onColumnResize}
+                onColumnResize={onColumnResize}
                 onColumnReorder={onColumnReorder}
                 onColumnReorderMove={onColumnReorderMove}
                 onColumnReorderEnd={onColumnReorderEnd}
@@ -243,7 +228,6 @@ class FixedDataTableBufferedRows extends React.Component {
                 showScrollbarY={scrollEnabledY}
                 container={props.container}
                 isRTL={props.isRTL}>
-                  {dragKnob}
                 </FixedDataTableRow>
             break;
           case RowType.ADDROW:

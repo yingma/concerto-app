@@ -29,6 +29,7 @@ import joinClasses from './vendor_upstream/core/joinClasses';
 import scrollbarsVisible from './selectors/scrollbarsVisible';
 import tableHeightsSelector from './selectors/tableHeights';
 import { RowType } from './MainTableType';
+import ColumnResizerLine from './ColumnResizerLine';
 
 import './css/layout/fixedDataTableLayout.css';
 import './css/style/fixedDataTable.css';
@@ -391,6 +392,11 @@ class FixedDataTable extends React.Component {
      */
     onRowTouchMove: PropTypes.func,
 
+     /**
+     * Callback that is called when a touch-move event happens on a row.
+     */
+    onRowReorderEndCallback: PropTypes.func,
+
     /**
      * Callback that is called when resizer has been released
      * and column needs to be updated.
@@ -687,9 +693,14 @@ class FixedDataTable extends React.Component {
       scrollY,
       tableSize,
       touchScrollEnabled,
+      isColumnResizing,
+      columnResizingData,
+      onColumnResizeEndCallback,
+      elementHeights,
     } = this.props;
 
     const { ownerHeight, width } = tableSize;
+    const { headerHeight } = elementHeights;
     // const { cellGroupWrapperHeight, footerHeight, groupHeaderHeight, headerHeight, addRowHeight } = elementHeights;
     const { scrollEnabledX, scrollEnabledY } = scrollbarsVisible(this.props);
     const attributes = gridAttributesGetter && gridAttributesGetter();
@@ -734,6 +745,22 @@ class FixedDataTable extends React.Component {
       tableClassName = joinClasses(tableClassName, 'fixedDataTable_isRTL');
     }
 
+    const dragKnob =
+      <ColumnResizerLine
+        height={componentHeight}
+        initialWidth={columnResizingData.width || 0}
+        minWidth={columnResizingData.minWidth || 0}
+        maxWidth={columnResizingData.maxWidth || Number.MAX_VALUE}
+        visible={!!isColumnResizing}
+        leftOffset={columnResizingData.left || 0}
+        knobHeight={headerHeight}
+        initialEvent={columnResizingData.initialEvent}
+        onColumnResizeEnd={onColumnResizeEndCallback}
+        columnKey={columnResizingData.key}
+        touchEnabled={touchScrollEnabled}
+        isRTL={this.props.isRTL}
+      />;
+
     return (
       <div
         className={joinClasses(
@@ -760,6 +787,7 @@ class FixedDataTable extends React.Component {
             height: scrollbarXOffsetTop,
             width
           }} ref={this._onRefRows}>
+          {dragKnob}
           {rows}
         </div>
         {scrollbarY}
@@ -810,7 +838,7 @@ class FixedDataTable extends React.Component {
         onColumnReorder={onColumnReorder}
         onColumnReorderMove={this._onColumnReorderMove}
         onColumnReorderEnd={this._onColumnReorderEnd}
-        onColumnResizeEnd={props.onColumnResizeEndCallback}
+        onColumnResize={this._onColumnResize}
         onRowClick={props.onRowClick}
         onRowContextMenu={props.onRowContextMenu}
         onRowDoubleClick={props.onRowDoubleClick}
@@ -1007,7 +1035,7 @@ class FixedDataTable extends React.Component {
                 dropRowIndex --;
               break;
             case RowType.FOOTER:
-                dropRowIndex --;
+                dropRowIndex -= 2;
               break;
           }
 
@@ -1046,7 +1074,14 @@ class FixedDataTable extends React.Component {
     this._dragging = false;
     if (this.props.isRowReordering) {
       this.props.rowActions.stopRowReorder();
-    }
+      if (this.props.rowReorderingData.oldRowIndex !== this.props.rowReorderingData.newRowIndex
+         && this.props.onRowReorderEndCallback) {
+        this.props.onRowReorderEndCallback(          
+          { rowKey: this.props.rowReorderingData.rowKey, 
+            oldRowIndex: this.props.rowReorderingData.oldRowIndex, 
+            newRowIndex: this.props.rowReorderingData.newRowIndex});
+      };
+    } 
   }
 
   _onScroll = (/*number*/ deltaX, /*number*/ deltaY) => {
