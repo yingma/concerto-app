@@ -184,11 +184,33 @@ class FixedDataTableRowImpl extends React.Component {
       return null;
     }
 
+    const { isRowReordering, rowReorderingData } = this.props;
+
     var subRowHeight = this.props.subRowHeight || 0;
     var style = {
       width: this.props.width,
       height: this.props.height + subRowHeight,
     };
+
+    if (isRowReordering && rowReorderingData) {
+      if (rowReorderingData.rowKey === this.props.rowKey) {
+        let x = rowReorderingData.left - rowReorderingData.dragDistanceX + this.props.scrollLeft - rowReorderingData.oldScrollLeft;
+        style.width = '2000px';
+        style.transform = `translate(${x}px) rotate(1deg)`;
+      }
+      if (rowReorderingData.newRowIndex < rowReorderingData.oldRowIndex) {
+        if (this.props.index >= rowReorderingData.newRowIndex && this.props.index < rowReorderingData.oldRowIndex) {
+          let height = rowReorderingData.height;
+          style.transform = `translate(0, ${height}px)`;
+        }
+      } else if (rowReorderingData.newRowIndex > rowReorderingData.oldRowIndex) {
+        if (this.props.index > rowReorderingData.oldRowIndex && this.props.index <= rowReorderingData.newRowIndex) {
+          let height = rowReorderingData.height * -1;
+          style.transform = `translate(0, ${height}px)`;
+        }
+      }
+    }
+    
     var className = cx({
       'fixedDataTableRowLayout/main': true,
       'public/fixedDataTableRow/main': true,
@@ -204,8 +226,8 @@ class FixedDataTableRowImpl extends React.Component {
         height={this.props.height}
         cellGroupWrapperHeight={this.props.cellGroupWrapperHeight}
         left={0}
+        zIndex={1}
         width={fixedColumnsWidth}
-        zIndex={2}
         columns={this.props.fixedColumns}
         touchEnabled={this.props.touchEnabled}
         onColumnResize={this.props.onColumnResize}
@@ -227,11 +249,11 @@ class FixedDataTableRowImpl extends React.Component {
       <FixedDataTableCellGroup
         key="fixed_right_cells"
         isScrolling={this.props.isScrolling}
+        zIndex={1}
         height={this.props.height}
         cellGroupWrapperHeight={this.props.cellGroupWrapperHeight}
         offsetLeft={this.props.width - fixedRightColumnsWidth - scrollbarOffset}
         width={fixedRightColumnsWidth}
-        zIndex={2}
         columns={this.props.fixedRightColumns}
         touchEnabled={this.props.touchEnabled}
         onColumnResize={this.props.onColumnResize}
@@ -258,7 +280,6 @@ class FixedDataTableRowImpl extends React.Component {
         left={this.props.scrollLeft}
         offsetLeft={fixedColumnsWidth}
         width={this.props.width - fixedColumnsWidth - fixedRightColumnsWidth - scrollbarOffset}
-        zIndex={0}
         columns={this.props.scrollableColumns}
         touchEnabled={this.props.touchEnabled}
         onColumnResize={this.props.onColumnResize}
@@ -407,6 +428,10 @@ class FixedDataTableRowImpl extends React.Component {
     }
   };
 
+  _isDragDropItem = () => {
+
+  };
+
   _onClick = (/*object*/ event) => {
     this.props.onClick(event, this.props.index);
   };
@@ -501,21 +526,28 @@ class FixedDataTableRow extends React.Component {
   }
 
   render() /*object*/ {
+    const { offsetTop, scrollTop, zIndex, visible, ...rowProps } = this.props;
+    const isMovingRow = this.props.isRowReordering && this.props.rowReorderingData 
+                        && this.props.rowReorderingData.rowKey === rowProps.rowKey;
     var style = {
       width: this.props.width,
       height: this.props.height,
-      zIndex: (this.props.zIndex ? this.props.zIndex : 0),
+      zIndex:  isMovingRow ? 3 : (this.props.zIndex ? this.props.zIndex : 0),
       display: (this.props.visible ? 'block' : 'none'),
     };
-    FixedDataTableTranslateDOMPosition(style, 0, this.props.offsetTop, this._initialRender, this.props.isRTL);
+    let top = offsetTop;
+    if (isMovingRow) {
+      top = this.props.rowReorderingData.top - this.props.rowReorderingData.dragDistanceY; //+ scrollTop - this.props.rowReorderingData.oldScrollTop; 
+      console.log(top);
+    }
 
-    const { offsetTop, zIndex, visible, ...rowProps } = this.props;
+    FixedDataTableTranslateDOMPosition(style, 0, top, this._initialRender, this.props.isRTL);
 
     return (
       <div
         style={style}
         className={cx('fixedDataTableRowLayout/rowWrapper')}
-      >
+        >
         <FixedDataTableRowImpl {...rowProps} />
       </div>
     );

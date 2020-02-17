@@ -19,6 +19,7 @@ import joinClasses from './vendor_upstream/core/joinClasses';
 import inRange from 'lodash/inRange';
 import MainTableAddRow from './MainTableAddRow';
 import { RowType } from './MainTableType';
+import FixedDataTableTranslateDOMPosition from './FixedDataTableTranslateDOMPosition';
 
 import './css/layout/fixedDataTableLayout.css';
 import './css/style/fixedDataTable.css';
@@ -33,10 +34,9 @@ class FixedDataTableBufferedRows extends React.Component {
     isScrolling: PropTypes.bool,
     firstViewportRowIndex: PropTypes.number.isRequired,
     endViewportRowIndex: PropTypes.number.isRequired,
-    fixedColumns: PropTypes.array.isRequired,
-    fixedRightColumns: PropTypes.array.isRequired,
+    fixedColumns: PropTypes.object.isRequired,
+    fixedRightColumns: PropTypes.object.isRequired,
     height: PropTypes.number.isRequired,
-    offsetTop: PropTypes.number.isRequired,
     onRowClick: PropTypes.func,
     onRowContextMenu: PropTypes.func,
     onRowDoubleClick: PropTypes.func,
@@ -63,7 +63,7 @@ class FixedDataTableBufferedRows extends React.Component {
     rowsToRender: PropTypes.array.isRequired,
     scrollLeft: PropTypes.number.isRequired,
     scrollTop: PropTypes.number.isRequired,
-    scrollableColumns: PropTypes.array.isRequired,
+    scrollableColumns: PropTypes.object.isRequired,
     showLastRowBorder: PropTypes.bool,
     showScrollbarY: PropTypes.bool,
     width: PropTypes.number.isRequired,
@@ -90,7 +90,7 @@ class FixedDataTableBufferedRows extends React.Component {
 
   render() /*object*/ {
     let { scrollTop, isScrolling, rowsToRender } = this.props;
-    const baseOffsetTop =  - scrollTop;
+    let baseOffsetTop =  - scrollTop;
     rowsToRender = rowsToRender || [];
 
     if (isScrolling) {
@@ -112,9 +112,11 @@ class FixedDataTableBufferedRows extends React.Component {
       this._staticRowArray[i] = this.renderRow({
         rowIndex,
         key: i,
-        baseOffsetTop,
+        baseOffsetTop
       });
     }
+
+  
 
     return <div>{this._staticRowArray}</div>;
   }
@@ -139,6 +141,8 @@ class FixedDataTableBufferedRows extends React.Component {
       ariaAddRowIndex,
       componentHeight,
       elementHeights,
+      isRowReordering,
+      rowReorderingData,
       columnReorderingData,
       columnResizingData,
       isColumnReordering,
@@ -147,8 +151,6 @@ class FixedDataTableBufferedRows extends React.Component {
       onColumnReorderMove,
       onColumnReorderEnd,
       onColumnResizeEnd,
-      scrollX,
-      scrolling,
       touchScrollEnabled,
       fixedColumns,
       fixedRightColumns,
@@ -165,12 +167,15 @@ class FixedDataTableBufferedRows extends React.Component {
     // row data
     const type = props.rowSettings.rowTypeGetter(rowIndex); // header or footer or addrow or row or header group
     
+    if (!type) {
+      return;
+    }
     // if row exists, then calculate row specific props
     if (!fake) {
       rowProps.height = props.rowSettings.rowHeightGetter(rowIndex);
       rowProps.subRowHeight = props.rowSettings.subRowHeightGetter(rowIndex);
       rowProps.offsetTop = Math.round(baseOffsetTop + props.rowOffsets[rowIndex]);
-      rowProps.key = props.rowKeyGetter ? props.rowKeyGetter(rowIndex) : key;
+      rowProps.rowKey = props.rowKeyGetter ? props.rowKeyGetter(rowIndex) : key;
       rowProps.attributes = props.rowSettings.rowAttributesGetter && props.rowSettings.rowAttributesGetter(rowIndex);
 
       const hasBottomBorder = (type === RowType.FOOTER);
@@ -184,7 +189,8 @@ class FixedDataTableBufferedRows extends React.Component {
       );
     }
 
-    const visible = inRange(rowIndex, props.firstViewportRowIndex, props.endViewportRowIndex);
+    const visible = inRange(rowIndex, props.firstViewportRowIndex, props.endViewportRowIndex) 
+                    || (isRowReordering && rowReorderingData.rowKey === rowProps.rowKey);
 
     const dragKnob =
       <ColumnResizerLine
@@ -213,13 +219,14 @@ class FixedDataTableBufferedRows extends React.Component {
                 ariaRowIndex={ariaHeaderIndex}
                 isHeaderOrFooter={true}
                 isScrolling={props.isScrolling}
+                isRowReordering={props.isRowReordering}
+                rowReorderingData={props.rowReorderingData}
                 className={joinClasses(
                   cx('fixedDataTableLayout/header'),
                   cx('public/fixedDataTable/header'),
                 )}
                 width={props.width}
                 height={headerHeight}
-                zIndex={1}
                 offsetTop={rowProps.offsetTop}
                 scrollLeft={Math.round(props.scrollLeft)}
                 visible={visible}
@@ -247,6 +254,8 @@ class FixedDataTableBufferedRows extends React.Component {
                 zIndex={1}
                 ariaRowIndex={ariaAddRowIndex}
                 isScrolling={props.isScrolling}
+                isRowReordering={props.isRowReordering}
+                rowReorderingData={props.rowReorderingData}
                 height={addRowHeight}
                 width={props.width}
                 offsetTop={rowProps.offsetTop}
@@ -266,16 +275,18 @@ class FixedDataTableBufferedRows extends React.Component {
               <FixedDataTableRow
                 key={key}
                 index={rowIndex}
+                zIndex={0}
                 ariaRowIndex={ariaFooterIndex}
                 isHeaderOrFooter={true}
                 isScrolling={props.isScrolling}
+                isRowReordering={props.isRowReordering}
+                rowReorderingData={props.rowReorderingData}
                 className={joinClasses(
                   cx('fixedDataTableLayout/footer'),
                   cx('public/fixedDataTable/footer'),
                 )}
                 width={props.width}
                 height={footerHeight}
-                zIndex={1}
                 offsetTop={rowProps.offsetTop}
                 visible={visible}
                 fixedColumns={fixedColumns.footer}
@@ -291,17 +302,22 @@ class FixedDataTableBufferedRows extends React.Component {
         default:
           row = 
             <FixedDataTableRow
-                key={key}
                 index={rowIndex}
+                key={key}
+                isHeaderOrFooter={false}
+                zIndex={2}
                 ariaRowIndex={rowIndex + props.ariaRowIndexOffset}
                 isScrolling={props.isScrolling}
                 width={props.width}
                 rowExpanded={props.rowExpanded}
                 scrollLeft={Math.round(props.scrollLeft)}
+                scrollTop={Math.round(props.scrollTop)}
                 fixedColumns={props.fixedColumns.cell}
                 fixedRightColumns={props.fixedRightColumns.cell}
                 scrollableColumns={props.scrollableColumns.cell}
                 onClick={props.onRowClick}
+                isRowReordering={props.isRowReordering}
+                rowReorderingData={props.rowReorderingData}
                 onContextMenu={props.onRowContextMenu}
                 onDoubleClick={props.onRowDoubleClick}
                 onMouseDown={props.onRowMouseDown}
@@ -316,7 +332,7 @@ class FixedDataTableBufferedRows extends React.Component {
                 visible={visible}
                 fake={fake}
                 container={props.container}
-                {...rowProps}
+                {...rowProps} 
               />
         }
     }

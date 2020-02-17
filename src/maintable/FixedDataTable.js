@@ -14,6 +14,7 @@
 /*eslint no-bitwise:1*/
 import React from 'react';
 import PropTypes from 'prop-types';
+import { events, getPosition } from './helper/utils'
 import FixedDataTableBufferedRows from './FixedDataTableBufferedRows';
 import FixedDataTableEventHelper from './FixedDataTableEventHelper';
 import ReactTouchHandler from './ReactTouchHandler';
@@ -27,11 +28,15 @@ import isNaN from 'lodash/isNaN';
 import joinClasses from './vendor_upstream/core/joinClasses';
 import scrollbarsVisible from './selectors/scrollbarsVisible';
 import tableHeightsSelector from './selectors/tableHeights';
+import { RowType } from './MainTableType';
 
 import './css/layout/fixedDataTableLayout.css';
 import './css/style/fixedDataTable.css';
 
-var ARROW_SCROLL_SPEED = 25;
+const ARROW_SCROLL_SPEED = 25;
+
+const DRAG_SCROLL_SPEED  = 10;
+const DRAG_SCROLL_BUFFER = 50;
 
 
 /**
@@ -199,6 +204,9 @@ class FixedDataTable extends React.Component {
      * returned value overrides `subRowHeight` for particular row.
      */
     subRowHeightGetter: PropTypes.func,
+    
+
+    rowDropIndexGetter: PropTypes.func,
 
     /**
      * The row expanded for table row.
@@ -628,6 +636,21 @@ class FixedDataTable extends React.Component {
         { passive: false }
       );
     }
+
+    this.events = {
+      end: this._handleEnd,
+      move: this._handleMove,
+      start: this._handleStart,
+    };
+
+    if (this._divRefRows) {
+      Object.keys(this.events).forEach((key) =>
+        events[key].forEach((eventName) =>
+        this._divRefRows.addEventListener(eventName, this.events[key], false),
+        ),
+      );
+    }
+
     this._reportContentHeight();
   }
 
@@ -736,7 +759,7 @@ class FixedDataTable extends React.Component {
           style={{
             height: scrollbarXOffsetTop,
             width
-          }}>
+          }} ref={this._onRefRows}>
           {rows}
         </div>
         {scrollbarY}
@@ -780,8 +803,10 @@ class FixedDataTable extends React.Component {
         componentHeight={componentHeight}
         columnReorderingData={props.columnReorderingData}
         columnResizingData={props.columnResizingData}
+        rowReorderingData={props.rowReorderingData}
         isColumnReordering={props.isColumnReordering}
         isColumnResizing={props.isColumnResizing}
+        isRowReordering={props.isRowReordering}
         onColumnReorder={onColumnReorder}
         onColumnReorderMove={this._onColumnReorderMove}
         onColumnReorderEnd={this._onColumnReorderEnd}
@@ -820,6 +845,10 @@ class FixedDataTable extends React.Component {
     if (this.props.stopReactWheelPropagation) {
       this._wheelHandler.setRoot(div);
     }
+  }
+
+  _onRefRows = (div) => {
+    this._divRefRows = div;
   }
 
   /**
@@ -898,6 +927,126 @@ class FixedDataTable extends React.Component {
     if (scrollStart !== scrollX && onHorizontalScroll) {
       onHorizontalScroll(scrollX)
     };
+  }
+
+  _handleStart = (event) => {
+    let { firstRowIndex, rowOffsets, rowsCount, scrollY, storedHeights, rowSettings } = this.props; 
+    this._position = getPosition(event);
+    const y = this._position.y + scrollY;
+
+    var offset, type;
+    for (let rowIndex = firstRowIndex; rowIndex < rowsCount; rowIndex ++) {
+      offset = rowOffsets[rowIndex];
+      type = rowSettings.rowTypeGetter(rowIndex); 
+      if (type === RowType.ROW && y >= offset && y <= offset + storedHeights[rowIndex]) {
+        if (this.props.rowKeyGetter) {
+          this._draggingRowKey = this.props.rowKeyGetter(rowIndex);
+        }
+        this._draggingRowIndex = rowIndex;
+        this._draggingHeight = storedHeights[rowIndex];
+        this._originalTop = y;
+        break;
+      }
+    }
+  }
+
+  _handleMove = (event) => {
+    // not selected any row
+    if (!this._draggingRowKey) {
+      return;
+    }
+
+    let { firstRowIndex, rowOffsets, rowsCount, scrollX, scrollY, storedHeights } = this.props; 
+    const position = getPosition(event);
+    const delta = {
+      x: this._position.x - position.x,
+      y: this._position.y - position.y,
+    };
+    const y = Math.min(position.y + scrollY, this.props.scrollContentHeight);
+    if (this._dragging) {
+      ///here find a place to drop the dragging row
+      if (position.x > this.props.width - DRAG_SCROLL_BUFFER) {
+        this._onScroll(DRAG_SCROLL_SPEED, 0);
+      } else if (position.x  <= DRAG_SCROLL_BUFFER) {
+        this._onScroll(DRAG_SCROLL_SPEED * -1, 0);
+      }
+  
+      if (position.y > this.props.height - DRAG_SCROLL_BUFFER) {
+        this._onScroll(0, DRAG_SCROLL_SPEED);
+      } else if (position.y  <= DRAG_SCROLL_BUFFER) {
+        this._onScroll(0, DRAG_SCROLL_SPEED * -1);
+      }
+
+      // if (this._dropRowIndex < this._draggingRowIndex) {
+      //   if (rowIndex > this._dropRowIndex && rowIndex < this._draggingRowIndex) {
+      //     offset += this._draggingHeight;
+      //   }
+      // } else if (this._dropRowIndex > this._draggingRowIndex) {
+      //   if (rowIndex > this._draggingRowIndex && rowIndex < this._dropRowIndex) {
+      //     offset -= this._draggingHeight;
+      //   }
+      // }
+
+      // let off = 0;
+      for (let rowIndex = firstRowIndex; rowIndex < rowsCount; rowIndex ++) {
+        let offset = rowOffsets[rowIndex];
+
+        if (y >= offset && y <= offset + storedHeights[rowIndex]) {
+          // if (rowIndex > this._draggingRowIndex && off === 0) {
+          //   off = this._draggingHeight;
+          // }
+          //this._dropRowIndex = this.props.rowDropIndexGetter(this._draggingRowIndex, rowIndex);
+          let type = this.props.rowTypeGetter(rowIndex);
+          let dropRowIndex = rowIndex;
+          switch (type) {
+            case RowType.HEADER:
+              if (this._draggingRowIndex > rowIndex)
+                dropRowIndex ++;
+              break;
+            case RowType.ADDROW:
+                dropRowIndex --;
+              break;
+            case RowType.FOOTER:
+                dropRowIndex --;
+              break;
+          }
+
+          this.props.rowActions.moveRowReorder({
+            deltaX: delta.x,
+            deltaY: delta.y,
+            newRowIndex: dropRowIndex,
+          });
+ 
+          this._dropRowIndex = dropRowIndex;
+          return;
+        }
+      }
+      return;
+    }
+
+    const combinedDelta = Math.abs(delta.x) + Math.abs(delta.y);
+
+    if (combinedDelta > 10 && this._draggingRowIndex) {
+      this._dragging = true;
+      this.props.rowActions.startRowReorder({
+        left: scrollX,
+        top: this._originalTop,
+        rowKey: this._draggingRowKey,
+        rowIndex: this._draggingRowIndex,
+        height: this._draggingHeight,
+        scrollLeft: Math.round(this.props.scrollX),
+        scrollTop: Math.round(this.props.scrollY),
+      });
+      //this._position = position;
+    }
+  }
+
+  _handleEnd = (event) => {
+    this._draggingRowIndex = undefined;
+    this._dragging = false;
+    if (this.props.isRowReordering) {
+      this.props.rowActions.stopRowReorder();
+    }
   }
 
   _onScroll = (/*number*/ deltaX, /*number*/ deltaY) => {

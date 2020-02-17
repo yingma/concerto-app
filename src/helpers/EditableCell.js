@@ -32,7 +32,7 @@ class EditableCell extends React.PureComponent {
   handleHide = () => {
     this.setState({ editing: false });
     if (this.props.data) {
-      this.props.data.setObjectAt(this.props.rowIndex, this.props.columnKey, this.state.value);
+      //this.props.data.setObjectAt(this.props.rowIndex, this.props.columnKey, this.state.value);
     }
   }
 

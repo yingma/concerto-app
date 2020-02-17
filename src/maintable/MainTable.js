@@ -42,6 +42,7 @@ class MainTable extends React.Component {
 
         this.getRowHeight = this.getRowHeight.bind(this);
         this.getRowType = this.getRowType.bind(this);
+        this.getRowKey = this.getRowKey.bind(this);
         this.getObjectAt = this.getObjectAt.bind(this);
 
         var index = 0;
@@ -81,10 +82,17 @@ class MainTable extends React.Component {
     }
 
     getRowType(index) {
-        if (index > this.state.sortedRowList.length - 1 && index < 0 ) {
+        if (index === undefined || index > this.state.sortedRowList.length - 1 || index < 0 ) {
             return null;
         }
         return this.state.sortedRowList[index].rowType;
+    }
+
+    getRowKey(index) {
+        if (index > this.state.sortedRowList.length - 1 && index < 0 ) {
+            return null;
+        }
+        return this.state.sortedRowList[index].rowKey;
     }
 
     getRowHeight(index) {
@@ -130,6 +138,7 @@ class MainTable extends React.Component {
         return null;
     }
 
+
     handleRef = component => {
         this.setState({ref: component});
     };
@@ -152,6 +161,7 @@ class MainTable extends React.Component {
                 rowsCount={this.state.sortedRowList.length}
                 rowHeightGetter={this.getRowHeight}
                 rowTypeGetter={this.getRowType}
+                rowKeyGetter={this.getRowKey}
                 height={400}
                 width={800}
                 {...this.props}>

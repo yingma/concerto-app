@@ -116,7 +116,7 @@ class MainTableAddRow extends React.Component {
     var inputStyle = {
       width: width,
       height: this.props.height,
-      borderRadius: '0px',
+      zIndex: this.props.zIndex,
     }
 
     var style = {
@@ -124,7 +124,24 @@ class MainTableAddRow extends React.Component {
       zIndex: (this.props.zIndex ? this.props.zIndex : 0),
       display: (this.props.visible ? 'block' : 'none'),
     };
-    FixedDataTableTranslateDOMPosition(style, 0, this.props.offsetTop, this._initialRender, this.props.isRTL);
+
+    let offset = this.props.offsetTop;
+    if (this.props.isRowReordering && this.props.rowReorderingData) {
+      if (this.props.rowReorderingData.newRowIndex < this.props.rowReorderingData.oldRowIndex) {
+        if (this.props.index >= this.props.rowReorderingData.newRowIndex && this.props.index < this.props.rowReorderingData.oldRowIndex) {
+          let height = this.props.rowReorderingData.height;
+          offset += height;
+        }
+      } else if (this.props.rowReorderingData.newRowIndex > this.props.rowReorderingData.oldRowIndex) {
+        if (this.props.index > this.props.rowReorderingData.oldRowIndex && this.props.index < this.props.rowReorderingData.newRowIndex) {
+          let height = this.props.rowReorderingData.height * -1;
+          offset += height;
+        }
+      }
+    }
+
+    FixedDataTableTranslateDOMPosition(style, 0, offset, this._initialRender, this.props.isRTL);
+
 
     const { offsetTop, zIndex, visible, ...rowProps } = this.props;
 

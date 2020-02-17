@@ -17,6 +17,7 @@ import FixedDataTableStore from './FixedDataTableStore';
 import React from 'react';
 import { bindActionCreators } from 'redux';
 import * as columnActions from './actions/columnActions';
+import * as rowActions from './actions/rowActions';
 import invariant from 'invariant';
 import pick from 'lodash/pick';
 import * as scrollActions from './actions/scrollActions';
@@ -32,6 +33,7 @@ class FixedDataTableContainer extends React.Component {
 
     this.scrollActions = bindActionCreators(scrollActions, this.reduxStore.dispatch);
     this.columnActions = bindActionCreators(columnActions, this.reduxStore.dispatch);
+    this.rowActions = bindActionCreators(rowActions, this.reduxStore.dispatch);
   }
 
   componentWillMount() {
@@ -73,6 +75,7 @@ class FixedDataTableContainer extends React.Component {
         {...this.state}
         scrollActions={this.scrollActions}
         columnActions={this.columnActions}
+        rowActions={this.rowActions}
       />
     );
   }
@@ -103,6 +106,9 @@ class FixedDataTableContainer extends React.Component {
       'scrollJumpedX',
       'scrollJumpedY',
       'tableSize',
+      'storedHeights',
+      'isRowReordering',
+      'rowReorderingData',
     ]);
 
     this.setState(boundState);

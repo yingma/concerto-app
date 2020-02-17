@@ -15,7 +15,8 @@ import { getScrollAnchor, scrollTo } from './scrollAnchor';
 import * as ActionTypes from '../actions/ActionTypes';
 import IntegerBufferSet from '../vendor_upstream/struct/IntegerBufferSet';
 import PrefixIntervalTree from '../vendor_upstream/struct/PrefixIntervalTree';
-import columnStateHelper from './columnStateHelper'
+import columnStateHelper from './columnStateHelper';
+import rowStateHelper from './rowStateHelper';
 import computeRenderedRows from './computeRenderedRows';
 import convertColumnElementsToData from '../helper/convertColumnElementsToData';
 import pick from 'lodash/pick';
@@ -52,7 +53,6 @@ function getInitialState() {
       rowAttributesGetter: undefined,
       rowGroupKeyGetter: () => 0,
       rowTypeGetter: () => 0,
-      rowContentHeightGetter: () => 0,
       rowHeight: 0,
       rowHeightGetter: () => 0,
       rowsCount: 0,
@@ -79,10 +79,12 @@ function getInitialState() {
      */
     columnReorderingData: {},
     columnResizingData: {},
+    RowReorderingData: {},
     firstRowIndex: 0,
     firstRowOffset: 0,
     isColumnReordering: false,
     isColumnResizing: false,
+    isRowReordering: false,
     maxScrollX: 0,
     maxScrollY: 0,
     rowOffsets: {},
@@ -130,7 +132,7 @@ function reducers(state = getInitialState(), action) {
         // we know setStateFromProps clones state internally
         newState.rowBufferSet = new IntegerBufferSet();
       }
-
+      
       const scrollAnchor = getScrollAnchor(newState, newProps, oldProps);
 
       // If anything has changed in state, update our rendered rows
@@ -187,6 +189,20 @@ function reducers(state = getInitialState(), action) {
     case ActionTypes.COLUMN_REORDER_MOVE: {
       const { deltaX } = action;
       return columnStateHelper.reorderColumnMove(state, deltaX);
+    }
+    case ActionTypes.ROW_REORDER_START: {
+      const { reorderData } = action;
+      return rowStateHelper.reorderRow(state, reorderData);
+    }
+    case ActionTypes.ROW_REORDER_MOVE: {
+      const { reorderData } = action;
+      return rowStateHelper.reorderRowMove(state, reorderData);
+    }
+    case ActionTypes.ROW_REORDER_END: {
+      return Object.assign({}, state, {
+        isRowReordering: false,
+        RowReorderingData: {}
+      });
     }
     case ActionTypes.SCROLL_TO_X: {
       const { scrollX } = action;
@@ -254,7 +270,6 @@ function setStateFromProps(state, props) {
   newState.rowSettings.subRowHeightGetter =
     props.subRowHeightGetter || (() => subRowHeight || 0);
   newState.rowSettings.rowAttributesGetter = props.rowAttributesGetter;
-
   newState.rowSettings.rowTypeGetter = props.rowTypeGetter;
 
   newState.scrollFlags = Object.assign({}, newState.scrollFlags,
